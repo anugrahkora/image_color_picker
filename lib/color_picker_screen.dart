@@ -14,6 +14,14 @@ class Marker {
   Marker({this.x = 0.0, this.y = 0.0});
 }
 
+class RGB {
+  final int r;
+  final int g;
+  final int b;
+
+  RGB(this.r, this.g, this.b);
+}
+
 class ColorPickerScreen extends StatefulWidget {
   const ColorPickerScreen({Key? key}) : super(key: key);
 
@@ -31,21 +39,24 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   final StreamController<Color> _stateController = StreamController<Color>();
   final StreamController<Marker> _gestureController =
       StreamController<Marker>();
+
+  final StreamController<RGB> _rgbValues = StreamController<RGB>();
   img.Image? photo;
 
   @override
   void initState() {
     currentKey = useSnapshot ? paintKey : imageKey;
     _gestureController.add(Marker(x: 0.0, y: 0.0));
+    _rgbValues.add(RGB(255, 255, 255));
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    // final size = MediaQuery.of(context).size;
+    final size = MediaQuery.of(context).size;
     return SafeArea(
       child: Scaffold(
-        appBar: AppBar(title: const Text("Color picker ")),
+        backgroundColor: const Color.fromARGB(255, 240, 240, 240),
         body: StreamBuilder(
             initialData: Colors.green[500],
             stream: _stateController.stream,
@@ -56,30 +67,31 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   builder: (context, position) {
                     return Stack(
                       children: <Widget>[
-                        RepaintBoundary(
-                          key: paintKey,
-                          child: GestureDetector(
-                            onTapDown: (details) {
-                              searchPixel(details.globalPosition,
-                                  details.localPosition);
-                            },
-                            onPanDown: (details) {
-                              searchPixel(details.globalPosition,
-                                  details.localPosition);
-                            },
-                            onPanUpdate: (details) {
-                              searchPixel(details.globalPosition,
-                                  details.localPosition);
-                            },
-                            child: Center(
-                              child: Image.asset(
-                                imagePath,
-                                key: imageKey,
-                                //color: Colors.red,
-                                //colorBlendMode: BlendMode.hue,
-                                //alignment: Alignment.bottomRight,
-                                fit: BoxFit.contain,
-                                //scale: .8,
+                        SizedBox(
+                          child: RepaintBoundary(
+                            key: paintKey,
+                            child: GestureDetector(
+                              onTapDown: (details) {
+                                searchPixel(details.globalPosition,
+                                    details.localPosition);
+                              },
+                              onPanDown: (details) {
+                                searchPixel(details.globalPosition,
+                                    details.localPosition);
+                              },
+                              onPanUpdate: (details) {
+                                searchPixel(details.globalPosition,
+                                    details.localPosition);
+                              },
+                              child: Center(
+                                child: SizedBox(
+                                  child: Image.asset(
+                                    imagePath,
+                                    key: imageKey,
+                                    fit: BoxFit.contain,
+                                    //scale: .8,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -104,18 +116,66 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                                 ]),
                           ),
                         ),
-                        Positioned(
-                          left: 100.0,
-                          top: 100.0,
-                          child: Text('$selectedColor',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  backgroundColor: Colors.black54)),
+                        // Positioned(
+                        //   left: 100.0,
+                        //   top: 100.0,
+                        //   child: Text('$selectedColor',
+                        //       style: const TextStyle(
+                        //           color: Colors.white,
+                        //           backgroundColor: Colors.black54)),
+                        // ),
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: StreamBuilder<RGB>(
+                              stream: _rgbValues.stream,
+                              builder: (context, color) {
+                                return Container(
+                                  padding: EdgeInsets.only(
+                                    top: size.height * 0.02,
+                                    bottom: size.height * 0.08,
+                                    right: size.height * 0.02,
+                                    left: size.height * 0.02,
+                                  ),
+                                  height: size.height * 0.2,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft:
+                                          Radius.circular(size.height * 0.04),
+                                      topRight:
+                                          Radius.circular(size.height * 0.04),
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(
+                                          size.height * 0.035),
+                                      clipBehavior: Clip.hardEdge,
+                                      child: showSelectedColors(
+                                          size.width, 1, color.data)),
+                                );
+                              }),
                         ),
                       ],
                     );
                   });
             }),
+      ),
+    );
+  }
+
+  Widget showSelectedColors(double width, int length, RGB? color) {
+    return SizedBox(
+      height: width * 0.05,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: length,
+        itemBuilder: (context, index) {
+          return Container(
+            width: width,
+            height: 20.0,
+            color: Color.fromRGBO(color!.r, color.g, color.b, 1.0),
+          );
+        },
       ),
     );
   }
@@ -145,6 +205,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
     int hex = abgrToArgb(pixel32);
 
     _stateController.add(Color(hex));
+    _rgbValues.add(RGB(Color(hex).red, Color(hex).green, Color(hex).blue));
     _gestureController
         .add(Marker(x: gesturePosition.dx, y: gesturePosition.dy));
   }
