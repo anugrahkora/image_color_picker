@@ -30,7 +30,7 @@ class ColorPickerScreen extends StatefulWidget {
 }
 
 class _ColorPickerScreenState extends State<ColorPickerScreen> {
-  String imagePath = 'assets/images/image2.jpg';
+  String imagePath = 'assets/images/image1.jpg';
   GlobalKey imageKey = GlobalKey();
   GlobalKey paintKey = GlobalKey();
   bool useSnapshot = false;
@@ -53,6 +53,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final availableHeight = MediaQuery.of(context).size.height -
+        MediaQuery.of(context).padding.top -
+        MediaQuery.of(context).padding.bottom;
     final size = MediaQuery.of(context).size;
     return SafeArea(
       child: Scaffold(
@@ -61,42 +64,50 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
             initialData: Colors.green[500],
             stream: _stateController.stream,
             builder: (buildContext, AsyncSnapshot<Color> snapshot) {
+              // print('Screen height: ${MediaQuery.of(context).size.height}');
+              // print('Real safe height: ${availableHeight}');
               Color selectedColor = snapshot.data ?? Colors.green;
               return StreamBuilder<Marker>(
                   stream: _gestureController.stream,
                   builder: (context, position) {
                     return Stack(
                       children: <Widget>[
-                        SizedBox(
-                          child: RepaintBoundary(
-                            key: paintKey,
-                            child: GestureDetector(
-                              onTapDown: (details) {
-                                searchPixel(details.globalPosition,
-                                    details.localPosition);
-                              },
-                              onPanDown: (details) {
-                                searchPixel(details.globalPosition,
-                                    details.localPosition);
-                              },
-                              onPanUpdate: (details) {
-                                searchPixel(details.globalPosition,
-                                    details.localPosition);
-                              },
-                              child: Center(
-                                child: SizedBox(
-                                  child: Image.asset(
-                                    imagePath,
-                                    key: imageKey,
-                                    fit: BoxFit.contain,
-                                    //scale: .8,
-                                  ),
-                                ),
+                        RepaintBoundary(
+                          key: paintKey,
+                          child: GestureDetector(
+                            onTapDown: (details) {
+                              searchPixel(
+                                  availableHeight,
+                                  size,
+                                  details.globalPosition,
+                                  details.localPosition);
+                            },
+                            onPanDown: (details) {
+                              searchPixel(
+                                  availableHeight,
+                                  size,
+                                  details.globalPosition,
+                                  details.localPosition);
+                            },
+                            onPanUpdate: (details) {
+                              searchPixel(
+                                  availableHeight,
+                                  size,
+                                  details.globalPosition,
+                                  details.localPosition);
+                            },
+                            child: Center(
+                              child: Image.asset(
+                                imagePath,
+                                key: imageKey,
+                                fit: BoxFit.contain,
+                                //scale: .8,
                               ),
                             ),
                           ),
                         ),
-                        Positioned(
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 100),
                           left: position.data?.x,
                           top: position.data?.y,
                           child: Container(
@@ -116,45 +127,45 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                                 ]),
                           ),
                         ),
-                        // Positioned(
-                        //   left: 100.0,
-                        //   top: 100.0,
-                        //   child: Text('$selectedColor',
-                        //       style: const TextStyle(
-                        //           color: Colors.white,
-                        //           backgroundColor: Colors.black54)),
-                        // ),
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: StreamBuilder<RGB>(
-                              stream: _rgbValues.stream,
-                              builder: (context, color) {
-                                return Container(
-                                  padding: EdgeInsets.only(
-                                    top: size.height * 0.02,
-                                    bottom: size.height * 0.08,
-                                    right: size.height * 0.02,
-                                    left: size.height * 0.02,
-                                  ),
-                                  height: size.height * 0.2,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.only(
-                                      topLeft:
-                                          Radius.circular(size.height * 0.04),
-                                      topRight:
-                                          Radius.circular(size.height * 0.04),
-                                    ),
-                                  ),
-                                  child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(
-                                          size.height * 0.035),
-                                      clipBehavior: Clip.hardEdge,
-                                      child: showSelectedColors(
-                                          size.width, 1, color.data)),
-                                );
-                              }),
+                        Positioned(
+                          left: 100.0,
+                          top: 100.0,
+                          child: Text('$selectedColor',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  backgroundColor: Colors.black54)),
                         ),
+                        // Align(
+                        //   alignment: Alignment.bottomCenter,
+                        //   child: StreamBuilder<RGB>(
+                        //       stream: _rgbValues.stream,
+                        //       builder: (context, color) {
+                        //         return Container(
+                        //           padding: EdgeInsets.only(
+                        //             top: size.height * 0.02,
+                        //             bottom: size.height * 0.08,
+                        //             right: size.height * 0.02,
+                        //             left: size.height * 0.02,
+                        //           ),
+                        //           height: size.height * 0.2,
+                        //           decoration: BoxDecoration(
+                        //             color: Colors.white,
+                        //             borderRadius: BorderRadius.only(
+                        //               topLeft:
+                        //                   Radius.circular(size.height * 0.04),
+                        //               topRight:
+                        //                   Radius.circular(size.height * 0.04),
+                        //             ),
+                        //           ),
+                        //           child: ClipRRect(
+                        //               borderRadius: BorderRadius.circular(
+                        //                   size.height * 0.035),
+                        //               clipBehavior: Clip.hardEdge,
+                        //               child: showSelectedColors(
+                        //                   size.width, 1, color.data)),
+                        //         );
+                        //       }),
+                        // ),
                       ],
                     );
                   });
@@ -180,17 +191,21 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
     );
   }
 
-  void searchPixel(Offset globalPosition, Offset localPosition) async {
+  void searchPixel(double height, Size size, Offset globalPosition,
+      Offset localPosition) async {
     if (photo == null) {
       await (useSnapshot ? loadSnapshotBytes() : loadImageBundleBytes());
     }
-    _calculatePixel(globalPosition, localPosition);
+    _calculatePixel(height, size, globalPosition, localPosition);
   }
 
-  void _calculatePixel(Offset globalPosition, Offset gesturePosition) {
+  void _calculatePixel(
+      double height, Size size, Offset globalPosition, Offset gesturePosition) {
     RenderBox box = currentKey.currentContext!.findRenderObject() as RenderBox;
     Offset localPosition = box.globalToLocal(globalPosition);
-    // print("${localPosition.dx.toInt()}  ${localPosition.dy.toInt()}");
+    // print("  ${localPosition.dy.toInt()}");
+    // print(" ${gesturePosition.dy.toInt()}");
+    // print(box.size.width);
 
     double px = localPosition.dx;
     double py = localPosition.dy;
@@ -200,14 +215,29 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
       px = (px / widgetScale);
       py = (py / widgetScale);
     }
-
+    // print(' px py $px $py');
+    // print("box wdith ${size.height}");
     int pixel32 = photo!.getPixelSafe(px.toInt(), py.toInt());
     int hex = abgrToArgb(pixel32);
 
     _stateController.add(Color(hex));
     _rgbValues.add(RGB(Color(hex).red, Color(hex).green, Color(hex).blue));
-    _gestureController
-        .add(Marker(x: gesturePosition.dx, y: gesturePosition.dy));
+    _gestureController.add(Marker(
+        x: gesturePosition.dx,
+        y: getDy(height, box.size.height, gesturePosition.dy)));
+  }
+
+  double getDy(double height, double boxHeight, double dy) {
+    if (dy < (height - boxHeight) / 2) {
+      // print(" dy < true");
+      return (height - boxHeight) / 2;
+    } else if (dy > ((height - boxHeight) / 2) + boxHeight) {
+      // print(" dy > true");
+      return ((height - boxHeight) / 2) + boxHeight;
+    } else {
+      // print(" dy = true");
+      return dy;
+    }
   }
 
   Future<void> loadImageBundleBytes() async {
